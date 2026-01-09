@@ -4,7 +4,7 @@
 
 ### Windows
 1. Open PowerShell or Command Prompt
-2. Navigate to the game folder: `cd "c:\Users\ktdra\CSE 481 D Prototypes\Bike Game"`
+2. Navigate to the game folder
 3. Run the batch file: `.\start_server.bat`
 4. Open your browser to `http://localhost:8000`
 
