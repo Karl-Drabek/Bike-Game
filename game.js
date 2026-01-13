@@ -36,11 +36,13 @@ class BikeGameScene extends Phaser.Scene {
         
         // Keys
         this.keys = {
-            w: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-            s: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
             a: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
             d: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-            shift: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+            left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+            right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+            shift: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT),
+            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+            down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN)
         };
         
         // Gear keys
@@ -461,7 +463,7 @@ class BikeGameScene extends Phaser.Scene {
         });
         this.distanceText.setDepth(100);
         
-        // Pedal UI (circle in bottom right)
+        // Pedal UI (above player's head)
         this.createPedalUI();
         
         // Status messages
@@ -477,63 +479,53 @@ class BikeGameScene extends Phaser.Scene {
     }
 
     createPedalUI() {
-        const pedalUIX = this.gameWidth - 120;
-        const pedalUIY = this.gameHeight - 120;
-        const pedalRadius = 50;
-        const size = (pedalRadius + 10) * 2;
+        // Smaller radius and positioned above bike
+        const pedalRadius = 25;
+        const size = (pedalRadius + 5) * 2;
         
         // Background circle
         const graphics = this.make.graphics({ x: 0, y: 0, add: false });
         
         // Draw dark background
         graphics.fillStyle(0x333333);
-        graphics.fillCircle(pedalRadius + 10, pedalRadius + 10, pedalRadius + 10);
+        graphics.fillCircle(pedalRadius + 5, pedalRadius + 5, pedalRadius + 5);
         graphics.lineStyle(2, 0x666666);
-        graphics.strokeCircle(pedalRadius + 10, pedalRadius + 10, pedalRadius);
+        graphics.strokeCircle(pedalRadius + 5, pedalRadius + 5, pedalRadius);
         
-        // W zone (top - green, entire top half)
-        graphics.fillStyle(0x00AA00);
-        graphics.beginPath();
-        graphics.arc(pedalRadius + 10, pedalRadius + 10, pedalRadius - 2, -Math.PI / 2, 0, false);
-        graphics.lineTo(pedalRadius + 10, pedalRadius + 10);
-        graphics.closePath();
-        graphics.fillPath();
-        graphics.beginPath();
-        graphics.arc(pedalRadius + 10, pedalRadius + 10, pedalRadius - 2, -Math.PI, -Math.PI / 2, false);
-        graphics.lineTo(pedalRadius + 10, pedalRadius + 10);
-        graphics.closePath();
-        graphics.fillPath();
-        
-        // S zone (bottom - red, entire bottom half)
+        // Left half - red (180 to 360 degrees / -90 to 90)
         graphics.fillStyle(0xCC0000);
         graphics.beginPath();
-        graphics.arc(pedalRadius + 10, pedalRadius + 10, pedalRadius - 2, 0, Math.PI / 2, false);
-        graphics.lineTo(pedalRadius + 10, pedalRadius + 10);
+        graphics.arc(pedalRadius + 5, pedalRadius + 5, pedalRadius - 2, -Math.PI / 2, Math.PI / 2, false);
+        graphics.lineTo(pedalRadius + 5, pedalRadius + 5);
         graphics.closePath();
         graphics.fillPath();
+        
+        // Right half - green (0 to 180 degrees / 90 to 270)
+        graphics.fillStyle(0x00AA00);
         graphics.beginPath();
-        graphics.arc(pedalRadius + 10, pedalRadius + 10, pedalRadius - 2, Math.PI / 2, Math.PI, false);
-        graphics.lineTo(pedalRadius + 10, pedalRadius + 10);
+        graphics.arc(pedalRadius + 5, pedalRadius + 5, pedalRadius - 2, Math.PI / 2, -Math.PI / 2, false);
+        graphics.lineTo(pedalRadius + 5, pedalRadius + 5);
         graphics.closePath();
         graphics.fillPath();
         
         const texture = graphics.generateTexture('pedalUI', size, size);
         graphics.destroy();
         
-        this.pedalUISprite = this.add.sprite(pedalUIX, pedalUIY, 'pedalUI');
+        // Position will be updated each frame to follow bike
+        this.pedalUISprite = this.add.sprite(0, 0, 'pedalUI');
         this.pedalUISprite.setDepth(100);
         this.pedalUISprite.setOrigin(0.5, 0.5);
         
         // Add text labels
-        this.add.text(pedalUIX, pedalUIY - pedalRadius - 5, 'W', {
-            fontSize: '16px',
+        this.pedalLabelA = this.add.text(0, 0, 'A', {
+            fontSize: '12px',
             fill: '#FFFFFF',
             fontFamily: 'Arial',
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(102);
         
-        this.add.text(pedalUIX, pedalUIY + pedalRadius + 5, 'S', {
-            fontSize: '16px',
+        this.pedalLabelD = this.add.text(0, 0, 'D', {
+            fontSize: '12px',
             fill: '#FFFFFF',
             fontFamily: 'Arial',
             fontStyle: 'bold'
@@ -543,25 +535,37 @@ class BikeGameScene extends Phaser.Scene {
         this.pedalIcon = this.add.graphics();
         this.pedalIcon.setDepth(101);
         this.pedalUIRadius = pedalRadius;
-        this.pedalUICenterX = pedalUIX;
-        this.pedalUICenterY = pedalUIY;
-        this.updatePedalIcon();
     }
 
     updatePedalIcon() {
         this.pedalIcon.clear();
         
+        // Position UI above bike's head
+        const pedalUIX = this.bikeX;
+        const pedalUIY = this.bikeY - 50;
+        
+        // Update sprite positions
+        this.pedalUISprite.x = pedalUIX;
+        this.pedalUISprite.y = pedalUIY;
+        
+        // Update label positions
+        this.pedalLabelA.x = pedalUIX - this.pedalUIRadius - 8;
+        this.pedalLabelA.y = pedalUIY;
+        
+        this.pedalLabelD.x = pedalUIX + this.pedalUIRadius + 8;
+        this.pedalLabelD.y = pedalUIY;
+        
         // Draw pedal icon at current rotation
         const rad = Phaser.Math.DegToRad(this.pedalRotation);
-        const iconX = this.pedalUICenterX + Math.cos(rad - Math.PI / 2) * this.pedalUIRadius;
-        const iconY = this.pedalUICenterY + Math.sin(rad - Math.PI / 2) * this.pedalUIRadius;
+        const iconX = pedalUIX + Math.cos(rad - Math.PI / 2) * this.pedalUIRadius;
+        const iconY = pedalUIY + Math.sin(rad - Math.PI / 2) * this.pedalUIRadius;
         
         this.pedalIcon.fillStyle(0xFF6600);
-        this.pedalIcon.fillCircle(iconX, iconY, 8);
+        this.pedalIcon.fillCircle(iconX, iconY, 6);
         
         // Draw rotation indicator line
         this.pedalIcon.lineStyle(2, 0xFFFFFF);
-        this.pedalIcon.lineBetween(this.pedalUICenterX, this.pedalUICenterY, iconX, iconY);
+        this.pedalIcon.lineBetween(pedalUIX, pedalUIY, iconX, iconY);
     }
 
     update(time, delta) {
@@ -695,43 +699,55 @@ class BikeGameScene extends Phaser.Scene {
     }
 
     handleInput() {
-        const isWPressed = this.keys.w.isDown;
-        const isSPressed = this.keys.s.isDown;
         const isAPressed = this.keys.a.isDown;
         const isDPressed = this.keys.d.isDown;
+        const isUPPressed = this.keys.up.isDown;
+        const isDOWNPressed = this.keys.down.isDown;
+        const isLEFTPressed = this.keys.left.isDown;
+        const isRIGHTPressed = this.keys.right.isDown;
         
-        // Lateral movement (A/D)
-        if (isAPressed) {
+        // Lateral movement (UP/DOWN)
+        if (isUPPressed) {
             this.bikeVelocityY -= this.turnSpeed;
         }
-        if (isDPressed) {
+        if (isDOWNPressed) {
             this.bikeVelocityY += this.turnSpeed;
         }
         
-        // Pedal input - align with visual (icon uses rad - PI/2 for drawing)
-        // When icon points UP (top green zone): pedalRotation is 270-360 or 0-90
-        // When icon points DOWN (bottom red zone): pedalRotation is 90-270
+        // Pedal input - align with visual
+        // Left half (red): pedalRotation is 270-360 or 0-90 (visual left side) - press A
+        // Right half (green): pedalRotation is 90-270 (visual right side) - press D
         const pedalAngle = this.pedalRotation % 360;
         
-        const isWInZone = (pedalAngle >= 270 || pedalAngle < 90);
-        const isSInZone = (pedalAngle >= 90 && pedalAngle < 270);
+        const isAInZone = (pedalAngle >= 180 && pedalAngle < 360);  // Red zone (left)
+        const isDInZone = (pedalAngle >= 0 && pedalAngle < 180);  // Green zone (right)
         
         let inputCorrect = false;
-        if (isWPressed && isWInZone) {
+        if (isAPressed && isAInZone) {
             this.bikeSpeed = Math.min(this.bikeSpeed + this.acceleration, this.maxSpeed);
             inputCorrect = true;
         }
-        if (isSPressed && isSInZone) {
+        if (isDPressed && isDInZone) {
             this.bikeSpeed = Math.min(this.bikeSpeed + this.acceleration, this.maxSpeed);
             inputCorrect = true;
         }
         
         // Decelerate if input is wrong
-        if (!inputCorrect && (isWPressed || isSPressed)) {
+        if (!inputCorrect && (isAPressed || isDPressed)) {
             this.bikeSpeed = Math.max(0, this.bikeSpeed - this.acceleration * 0.5);
         }
         
-        // Gear shifting
+        // Gear shifting with arrow keys
+        if (Phaser.Input.Keyboard.JustDown(this.keys.left)) {
+            // Downshift
+            this.currentGear = Math.max(1, this.currentGear - 1);
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.right)) {
+            // Upshift
+            this.currentGear = Math.min(3, this.currentGear + 1);
+        }
+        
+        // Number keys still work for direct gear selection
         if (this.input.keyboard.checkDown(this.input.keyboard.keys[49], 100)) { // Key '1'
             this.currentGear = 1;
         }
@@ -763,10 +779,11 @@ class BikeGameScene extends Phaser.Scene {
         // Pedal rotation speed is based on gear and bike speed
         const gearFactor = this.gearMultipliers[this.currentGear]; // 3, 2, or 1
         const speedFactor = this.bikeSpeed / this.maxSpeed; // 0 to 1
-        // Gear 1 (3x): base 6, max 18 degrees/frame
-        // Gear 2 (2x): base 4, max 12 degrees/frame
-        // Gear 3 (1x): base 2, max 6 degrees/frame
-            const rotationSpeed = (speedFactor * 80 * gearFactor);
+        // Reduced rotation speed - decreased from 80 to 40
+        // Gear 1 (3x): slower rotation
+        // Gear 2 (2x): slower rotation
+        // Gear 3 (1x): slower rotation
+            const rotationSpeed = (speedFactor * 20 * gearFactor);
             const dt = this.game.loop.delta / 16 || 1;
             this.pedalRotation = (this.pedalRotation + rotationSpeed * dt) % 360;
         this.updatePedalIcon();
